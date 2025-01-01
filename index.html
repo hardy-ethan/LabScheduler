@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Schedule Conflict Checker</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ical.js/1.5.0/ical.min.js"></script>
+    <style>
+        body {
+            font-family: system-ui, sans-serif;
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+            line-height: 1.5;
+        }
+        .input-section, .results-section {
+            margin-bottom: 2rem;
+        }
+        .time-slot {
+            padding: 0.5rem;
+            margin: 0.25rem 0;
+            background-color: #f0f0f0;
+            border-radius: 4px;
+        }
+        .time-slot.available {
+            background-color: #e6ffe6;
+        }
+        .time-slot.conflict {
+            background-color: #ffe6e6;
+        }
+        #fileInput {
+            margin: 1rem 0;
+        }
+        .results-section {
+            display: none;
+        }
+        textarea {
+            width: 100%;
+            min-height: 200px;
+            margin: 1rem 0;
+            padding: 0.5rem;
+            font-family: monospace;
+        }
+        button {
+            padding: 0.5rem 1rem;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .gap-input {
+            margin: 1rem 0;
+            padding: 1rem;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+        .gap-input input {
+            width: 80px;
+            padding: 0.25rem;
+            margin: 0 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="input-section">
+        <h1>Schedule Conflict Checker</h1>
+        
+        <h2>Step 1: Enter Lab Times</h2>
+        <p>Paste your time slots in the format "Day HH:MMAM/PM - HH:MMPM" (one per line).<br>The times for W25 have been prefilled.</p>
+        <textarea id="timeSlotInput"></textarea>
+        
+        <h2>Step 2: Set Required Gap</h2>
+        <div class="gap-input">
+            <label for="gapTime">Required gap between calendar events and time slots:</label>
+            <input type="number" id="gapTime" value="0" min="0" step="5">
+            <span>minutes</span>
+        </div>
+
+        <h2>Step 3: Upload Calendar</h2>
+        <p>Upload your ICS calendar file to find available time slots.</p>
+        <input type="file" id="fileInput" accept=".ics">
+    </div>
+
+    <div class="results-section" id="results">
+        <h2>Available Time Slots</h2>
+        <div id="availableSlots"></div>
+    </div>
+
+    <script>
+        function parseTimeStrings(inputText) {
+            return inputText.trim().split('\n').map(line => {
+                const [day, startTime, _, endTime] = line.trim().split(' ');
+                
+                function convertTo24Hour(timeStr) {
+                    const time = timeStr.slice(0, -2);
+                    const period = timeStr.slice(-2);
+                    let [hours, minutes] = time.split(':').map(Number);
+                    
+                    if (period === 'PM' && hours !== 12) {
+                        hours += 12;
+                    } else if (period === 'AM' && hours === 12) {
+                        hours = 0;
+                    }
+                    
+                    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+                }
+                
+                return {
+                    day: day.toUpperCase(),
+                    start: convertTo24Hour(startTime),
+                    end: convertTo24Hour(endTime)
+                };
+            });
+        }
+
+        function parseTime(timeStr) {
+            const [hours, minutes] = timeStr.split(':').map(Number);
+            return hours * 60 + minutes;
+        }
+
+        function hasConflict(slot, event, gapMinutes) {
+            const slotStart = parseTime(slot.start);
+            const slotEnd = parseTime(slot.end);
+            const eventStart = event.start.getHours() * 60 + event.start.getMinutes();
+            const eventEnd = event.end.getHours() * 60 + event.end.getMinutes();
+            
+            const days = {
+                'MO': 1, 'TU': 2, 'WE': 3, 'TH': 4, 'FR': 5, 'SA': 6, 'SU': 0
+            };
+            
+            const eventDay = event.start.getDay();
+            const slotDay = days[slot.day];
+
+            if (eventDay !== slotDay) return false;
+
+            // Add gap to the conflict check
+            const adjustedEventStart = eventStart - gapMinutes;
+            const adjustedEventEnd = eventEnd + gapMinutes;
+
+            return slotStart <= adjustedEventEnd && adjustedEventStart <= slotEnd
+        }
+
+        function processICSFile(icsData) {
+            const jcalData = ICAL.parse(icsData);
+            const comp = new ICAL.Component(jcalData);
+            const vevents = comp.getAllSubcomponents('vevent');
+            
+            const events = vevents.map(vevent => {
+                console.log(vevent)
+                const event = new ICAL.Event(vevent);
+                return {
+                    start: event.startDate.toJSDate(),
+                    end: event.endDate.toJSDate()
+                };
+            });
+
+            console.log(events)
+
+            const timeSlotInput = document.getElementById('timeSlotInput').value;
+            const timeSlots = parseTimeStrings(timeSlotInput);
+            const gapMinutes = parseInt(document.getElementById('gapTime').value) || 0;
+
+            const availableSlots = timeSlots.filter(slot => {
+                return !events.some(event => hasConflict(slot, event, gapMinutes));
+            });
+
+            displayResults(availableSlots);
+        }
+
+        function displayResults(availableSlots) {
+            console.log("Displaying results...")
+            const resultsDiv = document.getElementById('results');
+            const slotsDiv = document.getElementById('availableSlots');
+            resultsDiv.style.display = 'block';
+            slotsDiv.innerHTML = '';
+
+            if (availableSlots.length === 0) {
+                slotsDiv.innerHTML = '<p>No available time slots found.</p>';
+                return;
+            }
+
+            const dayNames = {
+                'MO': 'Monday',
+                'TU': 'Tuesday',
+                'WE': 'Wednesday',
+                'TH': 'Thursday',
+                'FR': 'Friday'
+            };
+
+            availableSlots.forEach(slot => {
+                function convertTo12Hour(time24) {
+                    const [hours, minutes] = time24.split(':');
+                    const hour = parseInt(hours);
+                    const period = hour >= 12 ? 'PM' : 'AM';
+                    const hour12 = hour % 12 || 12;
+                    return `${hour12}:${minutes}${period}`;
+                }
+
+                const div = document.createElement('div');
+                div.className = 'time-slot available';
+                div.textContent = `${dayNames[slot.day]}: ${convertTo12Hour(slot.start)} - ${convertTo12Hour(slot.end)}`;
+                slotsDiv.appendChild(div);
+            });
+        }
+
+        // Initialize with default time slots
+        document.getElementById('timeSlotInput').value = `Mo 11:30AM - 1:30PM
+Fr 1:30PM - 3:30PM
+Th 4:30PM - 6:30PM
+Tu 4:30PM - 6:30PM
+Fr 2:30PM - 4:30PM
+We 3:30PM - 5:30PM
+We 4:30PM - 6:30PM
+Mo 10:30AM - 12:30PM
+Fr 2:30PM - 4:30PM
+Fr 2:30PM - 4:30PM
+Tu 10:30AM - 12:30PM
+Tu 4:30PM - 6:30PM
+Mo 4:30PM - 6:30PM
+Fr 11:30AM - 1:30PM
+Fr 2:30PM - 4:30PM
+Fr 11:30AM - 1:30PM
+We 12:30PM - 2:30PM
+Tu 3:30PM - 5:30PM
+Fr 12:30PM - 2:30PM
+Th 3:30PM - 5:30PM
+Tu 1:30PM - 3:30PM
+Mo 3:30PM - 5:30PM
+Mo 4:30PM - 6:30PM`;
+
+        document.getElementById('fileInput').addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const icsData = e.target.result;
+                processICSFile(icsData);
+            };
+            reader.readAsText(file);
+        });
+
+        // Reprocess when gap time changes
+        document.getElementById('gapTime').addEventListener('change', () => {
+            const fileInput = document.getElementById('fileInput');
+            if (fileInput.files[0]) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const icsData = e.target.result;
+                    processICSFile(icsData);
+                };
+                reader.readAsText(fileInput.files[0]);
+            }
+        });
+    </script>
+</body>
+</html>
