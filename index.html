@@ -122,12 +122,36 @@
             return hours * 60 + minutes;
         }
 
+        function getRecurringDays(vevent) {
+            const rrule = vevent.getFirstPropertyValue('rrule');
+            if (!rrule) return null;
+
+            // Get the BYDAY values from the recurrence rule
+            const byDay = rrule.getComponent('byday');
+            if (!byDay || byDay.length === 0) return null;
+
+            return byDay;
+        }
+
+        function hasTimeConflict(slotStart, slotEnd, eventStart, eventEnd, gapMinutes) {
+            const adjustedEventStart = eventStart - gapMinutes;
+            const adjustedEventEnd = eventEnd + gapMinutes;
+            return slotStart <= adjustedEventEnd && adjustedEventStart <= slotEnd;
+        }
+
         function hasConflict(slot, event, gapMinutes) {
             const slotStart = parseTime(slot.start);
             const slotEnd = parseTime(slot.end);
             const eventStart = event.start.getHours() * 60 + event.start.getMinutes();
             const eventEnd = event.end.getHours() * 60 + event.end.getMinutes();
             
+            // If the event has recurring days, check if the slot day matches any of them
+            if (event.recurringDays && event.recurringDays.length > 0) {
+                return event.recurringDays.includes(slot.day) && 
+                       hasTimeConflict(slotStart, slotEnd, eventStart, eventEnd, gapMinutes);
+            }
+            
+            // For non-recurring events, check if the day matches and times conflict
             const days = {
                 'MO': 1, 'TU': 2, 'WE': 3, 'TH': 4, 'FR': 5, 'SA': 6, 'SU': 0
             };
@@ -135,13 +159,8 @@
             const eventDay = event.start.getDay();
             const slotDay = days[slot.day];
 
-            if (eventDay !== slotDay) return false;
-
-            // Add gap to the conflict check
-            const adjustedEventStart = eventStart - gapMinutes;
-            const adjustedEventEnd = eventEnd + gapMinutes;
-
-            return slotStart <= adjustedEventEnd && adjustedEventStart <= slotEnd
+            return eventDay === slotDay && 
+                   hasTimeConflict(slotStart, slotEnd, eventStart, eventEnd, gapMinutes);
         }
 
         function processICSFile(icsData) {
@@ -150,15 +169,15 @@
             const vevents = comp.getAllSubcomponents('vevent');
             
             const events = vevents.map(vevent => {
-                console.log(vevent)
                 const event = new ICAL.Event(vevent);
+                const recurringDays = getRecurringDays(vevent);
+                
                 return {
                     start: event.startDate.toJSDate(),
-                    end: event.endDate.toJSDate()
+                    end: event.endDate.toJSDate(),
+                    recurringDays: recurringDays
                 };
             });
-
-            console.log(events)
 
             const timeSlotInput = document.getElementById('timeSlotInput').value;
             const timeSlots = parseTimeStrings(timeSlotInput);
@@ -172,7 +191,6 @@
         }
 
         function displayResults(availableSlots) {
-            console.log("Displaying results...")
             const resultsDiv = document.getElementById('results');
             const slotsDiv = document.getElementById('availableSlots');
             resultsDiv.style.display = 'block';
