@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,27 +14,35 @@
             padding: 0 1rem;
             line-height: 1.5;
         }
-        .input-section, .results-section {
+
+        .input-section,
+        .results-section {
             margin-bottom: 2rem;
         }
+
         .lab-time {
             padding: 0.5rem;
             margin: 0.25rem 0;
             background-color: #f0f0f0;
             border-radius: 4px;
         }
+
         .lab-time.available {
             background-color: #e6ffe6;
         }
+
         .lab-time.conflict {
             background-color: #ffe6e6;
         }
+
         #fileInput {
             margin: 1rem 0;
         }
+
         .results-section {
             display: none;
         }
+
         textarea {
             width: 100%;
             min-height: 200px;
@@ -41,6 +50,7 @@
             padding: 0.5rem;
             font-family: monospace;
         }
+
         button {
             padding: 0.5rem 1rem;
             background-color: #007bff;
@@ -49,20 +59,24 @@
             border-radius: 4px;
             cursor: pointer;
         }
+
         button:hover {
             background-color: #0056b3;
         }
+
         .gap-input {
             margin: 1rem 0;
             padding: 1rem;
             background-color: #f8f9fa;
             border-radius: 4px;
         }
+
         .gap-input input {
             width: 80px;
             padding: 0.25rem;
             margin: 0 0.5rem;
         }
+
         .include-section {
             display: none;
             margin: 1rem 0;
@@ -70,20 +84,23 @@
             background-color: #f9f9f9;
             border-radius: 4px;
         }
+
         .include-section label {
             display: block;
             margin-bottom: 0.5rem;
         }
     </style>
 </head>
+
 <body>
     <div class="input-section">
         <h1>Lab Time Availability Checker</h1>
-        
+
         <h2>Step 1: Enter Available Lab Times</h2>
-        <p>Paste your lab times in the format "Day HH:MMAM/PM - HH:MMPM" (one per line).<br>The lab times for W25 have been prefilled.</p>
+        <p>Paste your lab times in the format "Day HH:MMAM/PM - HH:MMPM" (one per line).<br>The lab times for W25 have
+            been prefilled.</p>
         <textarea id="timeSlotInput"></textarea>
-        
+
         <h2>Step 2: Set Required Gap</h2>
         <div class="gap-input">
             <label for="gapTime">Required gap between classes and lab times:</label>
@@ -113,21 +130,21 @@
         function parseLabTimes(inputText) {
             return inputText.trim().split('\n').map(line => {
                 const [day, startTime, _, endTime] = line.trim().split(' ');
-                
+
                 function convertTo24Hour(timeStr) {
                     const time = timeStr.slice(0, -2);
                     const period = timeStr.slice(-2);
                     let [hours, minutes] = time.split(':').map(Number);
-                    
+
                     if (period === 'PM' && hours !== 12) {
                         hours += 12;
                     } else if (period === 'AM' && hours === 12) {
                         hours = 0;
                     }
-                    
+
                     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
                 }
-                
+
                 return {
                     day: day.toUpperCase(),
                     start: convertTo24Hour(startTime),
@@ -154,8 +171,8 @@
             const classEnd = classEvent.end.getHours() * 60 + classEvent.end.getMinutes();
 
             if (classEvent.recurringDays && classEvent.recurringDays.length > 0) {
-                return classEvent.recurringDays.includes(labTime.day) && 
-                       hasTimeConflict(labStart, labEnd, classStart, classEnd, gapMinutes);
+                return classEvent.recurringDays.includes(labTime.day) &&
+                    hasTimeConflict(labStart, labEnd, classStart, classEnd, gapMinutes);
             }
 
             const days = {
@@ -165,8 +182,8 @@
             const classDay = classEvent.start.getDay();
             const labDay = days[labTime.day];
 
-            return classDay === labDay && 
-                   hasTimeConflict(labStart, labEnd, classStart, classEnd, gapMinutes);
+            return classDay === labDay &&
+                hasTimeConflict(labStart, labEnd, classStart, classEnd, gapMinutes);
         }
 
         function displayClasses(classes) {
@@ -316,4 +333,5 @@ Mo 3:30PM - 5:30PM
 Mo 4:30PM - 6:30PM`;
     </script>
 </body>
+
 </html>
