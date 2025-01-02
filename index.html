@@ -289,6 +289,8 @@
             reader.readAsText(file);
         });
 
+        document.getElementById('gapTime').addEventListener('input', processExclusions);
+
         document.getElementById('timeSlotInput').value = `Mo 11:30AM - 1:30PM
 Fr 1:30PM - 3:30PM
 Th 4:30PM - 6:30PM
