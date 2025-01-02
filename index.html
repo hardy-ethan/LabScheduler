@@ -63,6 +63,17 @@
             padding: 0.25rem;
             margin: 0 0.5rem;
         }
+        .exclude-section {
+            display: none;
+            margin: 1rem 0;
+            padding: 1rem;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+        }
+        .exclude-section label {
+            display: block;
+            margin-bottom: 0.5rem;
+        }
     </style>
 </head>
 <body>
@@ -85,12 +96,21 @@
         <input type="file" id="fileInput" accept=".ics">
     </div>
 
+    <div class="exclude-section" id="excludeSection">
+        <h2>Step 4: Select Classes to Exclude</h2>
+        <p>Select the classes you want to exclude from the conflict check:</p>
+        <div id="classList"></div>
+        <button id="processExclusions">Proceed with Selected Classes</button>
+    </div>
+
     <div class="results-section" id="results">
         <h2>Available Lab Times</h2>
         <div id="availableSlots"></div>
     </div>
 
     <script>
+        let parsedClasses = [];
+
         function parseLabTimes(inputText) {
             return inputText.trim().split('\n').map(line => {
                 const [day, startTime, _, endTime] = line.trim().split(' ');
@@ -122,16 +142,6 @@
             return hours * 60 + minutes;
         }
 
-        function getRecurringDays(vevent) {
-            const rrule = vevent.getFirstPropertyValue('rrule');
-            if (!rrule) return null;
-
-            const byDay = rrule.getComponent('byday');
-            if (!byDay || byDay.length === 0) return null;
-
-            return byDay;
-        }
-
         function hasTimeConflict(labStart, labEnd, classStart, classEnd, gapMinutes) {
             const adjustedClassStart = classStart - gapMinutes;
             const adjustedClassEnd = classEnd + gapMinutes;
@@ -143,18 +153,16 @@
             const labEnd = parseTime(labTime.end);
             const classStart = classEvent.start.getHours() * 60 + classEvent.start.getMinutes();
             const classEnd = classEvent.end.getHours() * 60 + classEvent.end.getMinutes();
-            
-            // If the class has recurring days, check if the lab time day matches any of them
+
             if (classEvent.recurringDays && classEvent.recurringDays.length > 0) {
                 return classEvent.recurringDays.includes(labTime.day) && 
                        hasTimeConflict(labStart, labEnd, classStart, classEnd, gapMinutes);
             }
-            
-            // For non-recurring classes, check if the day matches and times conflict
+
             const days = {
                 'MO': 1, 'TU': 2, 'WE': 3, 'TH': 4, 'FR': 5, 'SA': 6, 'SU': 0
             };
-            
+
             const classDay = classEvent.start.getDay();
             const labDay = days[labTime.day];
 
@@ -162,28 +170,50 @@
                    hasTimeConflict(labStart, labEnd, classStart, classEnd, gapMinutes);
         }
 
+        function displayClasses(classes) {
+            const classList = document.getElementById('classList');
+            classList.innerHTML = '';
+
+            classes.forEach((classEvent, index) => {
+                const label = document.createElement('label');
+                label.innerHTML = `
+                    <input type="checkbox" class="exclude-checkbox" data-index="${index}" checked>
+                    ${classEvent.start.toLocaleString()} - ${classEvent.end.toLocaleString()}
+                `;
+                classList.appendChild(label);
+            });
+
+            document.getElementById('excludeSection').style.display = 'block';
+        }
+
         function processICSFile(icsData) {
             const jcalData = ICAL.parse(icsData);
             const comp = new ICAL.Component(jcalData);
             const vevents = comp.getAllSubcomponents('vevent');
-            
-            const classes = vevents.map(vevent => {
+
+            parsedClasses = vevents.map(vevent => {
                 const event = new ICAL.Event(vevent);
-                const recurringDays = getRecurringDays(vevent);
-                
                 return {
                     start: event.startDate.toJSDate(),
                     end: event.endDate.toJSDate(),
-                    recurringDays: recurringDays
+                    recurringDays: vevent.getFirstPropertyValue('rrule')?.getComponent('byday') || []
                 };
             });
+
+            displayClasses(parsedClasses);
+        }
+
+        function processExclusions() {
+            const selectedClasses = Array.from(document.querySelectorAll('.exclude-checkbox'))
+                .filter(checkbox => checkbox.checked)
+                .map(checkbox => parsedClasses[checkbox.dataset.index]);
 
             const labTimesInput = document.getElementById('timeSlotInput').value;
             const labTimes = parseLabTimes(labTimesInput);
             const gapMinutes = parseInt(document.getElementById('gapTime').value) || 0;
 
             const availableLabTimes = labTimes.filter(labTime => {
-                return !classes.some(classEvent => hasConflict(labTime, classEvent, gapMinutes));
+                return !selectedClasses.some(classEvent => hasConflict(labTime, classEvent, gapMinutes));
             });
 
             displayResults(availableLabTimes);
@@ -224,7 +254,20 @@
             });
         }
 
-        // Initialize with default lab times
+        document.getElementById('fileInput').addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const icsData = e.target.result;
+                processICSFile(icsData);
+            };
+            reader.readAsText(file);
+        });
+
+        document.getElementById('processExclusions').addEventListener('click', processExclusions);
+
         document.getElementById('timeSlotInput').value = `Mo 11:30AM - 1:30PM
 Fr 1:30PM - 3:30PM
 Th 4:30PM - 6:30PM
@@ -248,31 +291,6 @@ Th 3:30PM - 5:30PM
 Tu 1:30PM - 3:30PM
 Mo 3:30PM - 5:30PM
 Mo 4:30PM - 6:30PM`;
-
-        document.getElementById('fileInput').addEventListener('change', (event) => {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const icsData = e.target.result;
-                processICSFile(icsData);
-            };
-            reader.readAsText(file);
-        });
-
-        // Reprocess when gap time changes
-        document.getElementById('gapTime').addEventListener('change', () => {
-            const fileInput = document.getElementById('fileInput');
-            if (fileInput.files[0]) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const icsData = e.target.result;
-                    processICSFile(icsData);
-                };
-                reader.readAsText(fileInput.files[0]);
-            }
-        });
     </script>
 </body>
 </html>
