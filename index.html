@@ -100,7 +100,6 @@
         <h2>Step 4: Select Classes to Include</h2>
         <p>Select the classes you want to include in the conflict check:</p>
         <div id="classList"></div>
-        <button id="processExclusions">Proceed with Selected Classes</button>
     </div>
 
     <div class="results-section" id="results">
@@ -201,10 +200,12 @@
                     <input type="checkbox" class="include-checkbox" data-index="${index}" checked>
                     <strong>${classEvent.summary}</strong>: ${recurringDays} ${startTime} - ${endTime}
                 `;
+                label.addEventListener('change', processExclusions);
                 classList.appendChild(label);
             });
 
             document.getElementById('includeSection').style.display = 'block';
+            processExclusions();
         }
 
         function processICSFile(icsData) {
@@ -287,8 +288,6 @@
             };
             reader.readAsText(file);
         });
-
-        document.getElementById('processExclusions').addEventListener('click', processExclusions);
 
         document.getElementById('timeSlotInput').value = `Mo 11:30AM - 1:30PM
 Fr 1:30PM - 3:30PM
