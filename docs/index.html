@@ -105,6 +105,13 @@
             been prefilled.</p>
         <textarea id="timeSlotInput"></textarea>
 
+        <h2>Step 1.1: Select Sorting Option</h2>
+        <label for="sortOrder">Sort lab times by:</label>
+        <select id="sortOrder">
+            <option value="chronological" selected>Chronological Order</option>
+            <option value="entered">Order Entered</option>
+        </select>
+
         <h2>Step 2: Set Required Gap</h2>
         <div class="gap-input">
             <label for="gapTime">Required gap between classes and lab times:</label>
@@ -308,6 +315,14 @@
                 return;
             }
 
+            const dayOrder = {
+                'MO': 1,
+                'TU': 2,
+                'WE': 3,
+                'TH': 4,
+                'FR': 5
+            };
+
             const dayNames = {
                 'MO': 'Monday',
                 'TU': 'Tuesday',
@@ -315,6 +330,15 @@
                 'TH': 'Thursday',
                 'FR': 'Friday'
             };
+
+            if (document.getElementById('sortOrder').value === 'chronological') {
+                availableLabTimes.sort((a, b) => {
+                    if (dayOrder[a.day] !== dayOrder[b.day]) {
+                        return dayOrder[a.day] - dayOrder[b.day];
+                    }
+                    return parseTime(a.start) - parseTime(b.start);
+                });
+            }
 
             availableLabTimes.forEach(labTime => {
                 function convertTo12Hour(time24) {
@@ -345,6 +369,7 @@
         });
 
         document.getElementById('gapTime').addEventListener('input', processExclusions);
+        document.getElementById('sortOrder').addEventListener('change', processExclusions);
 
         document.getElementById('timeSlotInput').value = `Mo 11:30AM - 1:30PM
 Fr 1:30PM - 3:30PM
