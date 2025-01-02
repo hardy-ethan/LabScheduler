@@ -97,8 +97,8 @@
     </div>
 
     <div class="include-section" id="includeSection">
-        <h2>Step 4: Select Classes to include</h2>
-        <p>Select the classes you want to include from the conflict check:</p>
+        <h2>Step 4: Select Classes to Include</h2>
+        <p>Select the classes you want to include in the conflict check:</p>
         <div id="classList"></div>
         <button id="processExclusions">Proceed with Selected Classes</button>
     </div>
@@ -188,6 +188,10 @@
                 const recurringDays = classEvent.recurringDays
                     .map(dayCode => daysMap[dayCode])
                     .join(', ') || 'One-time event';
+
+                if (recurringDays === "One-time event") {
+                    return;
+                }
 
                 const startTime = classEvent.start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                 const endTime = classEvent.end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
