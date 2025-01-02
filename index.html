@@ -135,7 +135,7 @@
         function hasTimeConflict(labStart, labEnd, classStart, classEnd, gapMinutes) {
             const adjustedClassStart = classStart - gapMinutes;
             const adjustedClassEnd = classEnd + gapMinutes;
-            return labStart <= adjustedClassEnd && adjustedClassStart <= labEnd;
+            return labStart < adjustedClassEnd && adjustedClassStart < labEnd;
         }
 
         function hasConflict(labTime, classEvent, gapMinutes) {
