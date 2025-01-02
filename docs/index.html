@@ -7,42 +7,88 @@
     <title>Lab Time Availability Checker</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ical.js/1.5.0/ical.min.js"></script>
     <style>
+        :root {
+            --background-color: #121212;
+            --text-color: #ffffff;
+            --input-bg-color: #1c1c1c;
+            --input-text-color: #ffffff;
+            --lab-time-bg-color: #1c1c1c;
+            --available-bg-color: #2e7d32;
+            --conflict-bg-color: #c62828;
+            --button-bg-color: #007bff;
+            --button-hover-bg-color: #0056b3;
+        }
+
+        .light-mode {
+            --background-color: #ffffff;
+            --text-color: #000000;
+            --input-bg-color: #f8f9fa;
+            --input-text-color: #000000;
+            --lab-time-bg-color: #f0f0f0;
+            --available-bg-color: #e6ffe6;
+            --conflict-bg-color: #ffe6e6;
+            --button-bg-color: #007bff;
+            --button-hover-bg-color: #0056b3;
+        }
+    
         body {
+            background-color: var(--background-color);
+            color: var(--text-color);
             font-family: system-ui, sans-serif;
             max-width: 800px;
             margin: 2rem auto;
             padding: 0 1rem;
             line-height: 1.5;
         }
-
+    
         .input-section,
         .results-section {
             margin-bottom: 2rem;
         }
-
+    
         .lab-time {
             padding: 0.5rem;
             margin: 0.25rem 0;
-            background-color: #f0f0f0;
+            background-color: var(--lab-time-bg-color);
             border-radius: 4px;
         }
-
+    
         .lab-time.available {
-            background-color: #e6ffe6;
+            background-color: var(--available-bg-color);
         }
-
+    
         .lab-time.conflict {
-            background-color: #ffe6e6;
+            background-color: var(--conflict-bg-color);
         }
-
-        #fileInput {
-            margin: 1rem 0;
+    
+        textarea {
+            background-color: var(--input-bg-color);
+            color: var(--input-text-color);
         }
-
+    
+        .gap-input input {
+            width: 80px;
+            padding: 0.25rem;
+            margin: 0 0.5rem;
+        }
+    
+        button {
+            padding: 0.5rem 1rem;
+            background-color: var(--button-bg-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+    
+        button:hover {
+            background-color: var(--button-hover-bg-color);
+        }
+    
         .results-section {
             display: none;
         }
-
+    
         textarea {
             width: 100%;
             min-height: 200px;
@@ -50,38 +96,11 @@
             padding: 0.5rem;
             font-family: monospace;
         }
-
-        button {
-            padding: 0.5rem 1rem;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-
-        button:hover {
-            background-color: #0056b3;
-        }
-
-        .gap-input {
-            margin: 1rem 0;
-            padding: 1rem;
-            background-color: #f8f9fa;
-            border-radius: 4px;
-        }
-
-        .gap-input input {
-            width: 80px;
-            padding: 0.25rem;
-            margin: 0 0.5rem;
-        }
-
+    
         .include-section {
             display: none;
             margin: 1rem 0;
             padding: 1rem;
-            background-color: #f9f9f9;
             border-radius: 4px;
         }
 
@@ -89,14 +108,19 @@
             display: block;
             margin-bottom: 0.5rem;
         }
-
+    
         .class-days {
             padding-left: 20px;
         }
     </style>
 </head>
 
-<body>
+<body class="dark-mode">
+    <div class="toggle-section">
+        <label for="modeToggle">Dark Mode:</label>
+        <input type="checkbox" id="modeToggle" checked>
+    </div>
+
     <div class="input-section">
         <h1>Lab Time Availability Checker</h1>
 
@@ -375,6 +399,21 @@
                 labTimesDiv.appendChild(div);
             });
         }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const modeToggle = document.getElementById('modeToggle');
+            const body = document.body;
+
+            modeToggle.addEventListener('change', () => {
+                if (modeToggle.checked) {
+                    body.classList.remove('light-mode');
+                    body.classList.add('dark-mode');
+                } else {
+                    body.classList.remove('dark-mode');
+                    body.classList.add('light-mode');
+                }
+            });
+        });
 
         document.getElementById('fileInput').addEventListener('change', (event) => {
             const file = event.target.files[0];
