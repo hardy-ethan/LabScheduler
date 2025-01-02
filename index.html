@@ -175,10 +175,27 @@
             classList.innerHTML = '';
 
             classes.forEach((classEvent, index) => {
+                const daysMap = {
+                    'MO': 'Monday',
+                    'TU': 'Tuesday',
+                    'WE': 'Wednesday',
+                    'TH': 'Thursday',
+                    'FR': 'Friday',
+                    'SA': 'Saturday',
+                    'SU': 'Sunday'
+                };
+
+                const recurringDays = classEvent.recurringDays
+                    .map(dayCode => daysMap[dayCode])
+                    .join(', ') || 'One-time event';
+
+                const startTime = classEvent.start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const endTime = classEvent.end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
                 const label = document.createElement('label');
                 label.innerHTML = `
                     <input type="checkbox" class="exclude-checkbox" data-index="${index}" checked>
-                    ${classEvent.start.toLocaleString()} - ${classEvent.end.toLocaleString()}
+                    <strong>${classEvent.summary}</strong>: ${recurringDays} ${startTime} - ${endTime}
                 `;
                 classList.appendChild(label);
             });
@@ -196,6 +213,7 @@
                 return {
                     start: event.startDate.toJSDate(),
                     end: event.endDate.toJSDate(),
+                    summary: event.summary,
                     recurringDays: vevent.getFirstPropertyValue('rrule')?.getComponent('byday') || []
                 };
             });
