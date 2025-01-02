@@ -63,14 +63,14 @@
             padding: 0.25rem;
             margin: 0 0.5rem;
         }
-        .exclude-section {
+        .include-section {
             display: none;
             margin: 1rem 0;
             padding: 1rem;
             background-color: #f9f9f9;
             border-radius: 4px;
         }
-        .exclude-section label {
+        .include-section label {
             display: block;
             margin-bottom: 0.5rem;
         }
@@ -96,9 +96,9 @@
         <input type="file" id="fileInput" accept=".ics">
     </div>
 
-    <div class="exclude-section" id="excludeSection">
-        <h2>Step 4: Select Classes to Exclude</h2>
-        <p>Select the classes you want to exclude from the conflict check:</p>
+    <div class="include-section" id="includeSection">
+        <h2>Step 4: Select Classes to include</h2>
+        <p>Select the classes you want to include from the conflict check:</p>
         <div id="classList"></div>
         <button id="processExclusions">Proceed with Selected Classes</button>
     </div>
@@ -194,13 +194,13 @@
 
                 const label = document.createElement('label');
                 label.innerHTML = `
-                    <input type="checkbox" class="exclude-checkbox" data-index="${index}" checked>
+                    <input type="checkbox" class="include-checkbox" data-index="${index}" checked>
                     <strong>${classEvent.summary}</strong>: ${recurringDays} ${startTime} - ${endTime}
                 `;
                 classList.appendChild(label);
             });
 
-            document.getElementById('excludeSection').style.display = 'block';
+            document.getElementById('includeSection').style.display = 'block';
         }
 
         function processICSFile(icsData) {
@@ -222,7 +222,7 @@
         }
 
         function processExclusions() {
-            const selectedClasses = Array.from(document.querySelectorAll('.exclude-checkbox'))
+            const selectedClasses = Array.from(document.querySelectorAll('.include-checkbox'))
                 .filter(checkbox => checkbox.checked)
                 .map(checkbox => parsedClasses[checkbox.dataset.index]);
 
