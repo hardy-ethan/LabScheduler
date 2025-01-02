@@ -89,6 +89,10 @@
             display: block;
             margin-bottom: 0.5rem;
         }
+
+        .class-days {
+            padding-left: 20px;
+        }
     </style>
 </head>
 
@@ -214,11 +218,38 @@
 
                 const label = document.createElement('label');
                 label.innerHTML = `
-                    <input type="checkbox" class="include-checkbox" data-index="${index}" checked>
-                    <strong>${classEvent.summary}</strong>: ${recurringDays} ${startTime} - ${endTime}
+                    <input type="checkbox" class="include-checkbox-parent" data-index="${index}" checked>
+                    <strong>${classEvent.summary}</strong>
                 `;
-                label.addEventListener('change', processExclusions);
+
+                const classDaysDiv = document.createElement('div');
+                classDaysDiv.className = 'class-days';
+
+                classEvent.recurringDays.forEach(dayCode => {
+                    const dayLabel = document.createElement('label');
+                    dayLabel.innerHTML = `
+                        <input type="checkbox" class="include-checkbox-child" data-index="${index}" data-day="${dayCode}" checked>
+                        ${daysMap[dayCode]} ${startTime} - ${endTime}
+                    `;
+                    classDaysDiv.appendChild(dayLabel);
+                });
+
+                label.appendChild(classDaysDiv);
                 classList.appendChild(label);
+
+                const parentCheckbox = label.querySelector('.include-checkbox-parent');
+                parentCheckbox.addEventListener('change', (event) => {
+                    const isChecked = event.target.checked;
+                    const childCheckboxes = label.querySelectorAll('.include-checkbox-child');
+                    childCheckboxes.forEach(childCheckbox => {
+                        childCheckbox.checked = isChecked;
+                        processExclusions();
+                    });
+                });
+
+                label.querySelectorAll('.include-checkbox-child').forEach(childCheckbox => {
+                    childCheckbox.addEventListener('change', processExclusions);
+                });
             });
 
             document.getElementById('includeSection').style.display = 'block';
@@ -244,9 +275,16 @@
         }
 
         function processExclusions() {
-            const selectedClasses = Array.from(document.querySelectorAll('.include-checkbox'))
-                .filter(checkbox => checkbox.checked)
-                .map(checkbox => parsedClasses[checkbox.dataset.index]);
+            const selectedClasses = [];
+
+            document.querySelectorAll('.include-checkbox-child:checked').forEach(checkbox => {
+                const index = checkbox.dataset.index;
+                const day = checkbox.dataset.day;
+                const event = parsedClasses[index];
+                if (!selectedClasses.some(e => e.index === index && e.day === day)) {
+                    selectedClasses.push({ ...event, day, recurringDays: [day] });
+                }
+            });
 
             const labTimesInput = document.getElementById('timeSlotInput').value;
             const labTimes = parseLabTimes(labTimesInput);
